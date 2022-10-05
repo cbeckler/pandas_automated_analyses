@@ -158,6 +158,7 @@ def col_pivot_row_index_results(df, col_name, index_ordered_list, aggregations, 
     ### index_ordered_list is the list of columns you wish to make your index after groupby, in their desired order
     ####        if you are using index_mapping to change the column names, this list MUST match the new names!
     ### aggregations is the dictionary containing your analyses for the groupby
+    ####        if you are using index_mapping to change the column names, this dictionary MUST match the new names!
     
     ## OPTIONAL:
     ### col_mapping is the dictionary to map your data values in col_name to you desired labels
@@ -292,3 +293,195 @@ def col_pivot_row_index_results(df, col_name, index_ordered_list, aggregations, 
         df.rename(columns=col_rename, inplace=True) 
 
     return df
+
+
+#####       TWO VAR ROW MULTIINDEX SINGLE HEADER ROW              #####
+
+
+def col_pivot_row_multiindex_results(df, col_name, index_ordered_list, index_col, aggregations, col_mapping=None, col_order=None, index_mapping=None, \
+    index2_ordered_list=None, index1_name=None, index2_name=None, reorder_row_indices=True, pct_index1cat=False):
+
+    # this function will perform an analysis of the data by the col_name and index columns with groupby by col_name and index_col
+    # it will then reshape and clean the results table to a report-ready format
+
+    ## this function should be used when you have data in a column you wish to analyze by and then pivot so each
+    ## data label in that column is the heading of a column 
+    ###       ex: FY19-20, FY20-21, etc. that were in a single 'Fiscal Year' column
+    ## the data should also have values in multiple columns you wish to analyze and combine into one index
+    ###       ex: counts for 'inpatient', 'outpatient', 'emergency_care' columns to be combined into one 'Care Type' index
+    ## it should also have one categorical column to be used as index_col in the groupby (ex: a column for race or gender)
+     
+    # ARGUMENTS
+    
+    ## MANDATORY:
+    ### df is your dataframe to be analyzed
+    ### col_name is the column to perform the groupby with and whose values will become your column headers    
+    ### index_ordered_list is the list of columns you wish to make your index after groupby, in their desired order
+    ####        if you are using index_mapping to change the column names, this list MUST match the new names!
+    ### aggregations is the dictionary containing your analyses for the groupby
+    ####        if you are using index_mapping to change the column names, this dictionary MUST match the new names!
+    
+    ## OPTIONAL:
+    ### col_mapping is the dictionary to map your data values in col_name to you desired labels
+    ### col_order is the dictionary to map your desired labels to their desired order
+    ####    if you are using col_mapping, this dcitionary MUST match the new names!
+    ### index_mapping is the dictionary to map your index col names in your data to their desired labels
+    ### index2_ordered_list is the list of your index 2 values in order. while not mandatatory, highly recommended
+    ### index1_name is the name of your first index (created from the index_ordered_list columns)
+    ### index2_name is the name of your second index (created from the index_col)
+    ### reorder_row_indices will reorder your results df in ascending order for both indices. defaults to True
+    ####        this will reorder accourding to index_ordered_list (always) and index2_ordered_list (when present)
+    ### pct_index1cat will convert your data into percentage form per category in index1 for each column. defaults to False
+
+    import pandas as pd
+
+    if reorder_row_indices == True and index2_ordered_list == None:
+        index2_ordered_list = [value for value in pd.unique(df[index_col])]
+
+    # set up ordering for the pivot column
+
+    ## map the labels to the data values for the column
+    if col_mapping == None:
+        pass 
+    else:
+        # create a name_col with label values
+        df = df.assign(name_col=df[col_name].apply(lambda x: col_mapping[x]))
+
+    ## map the order to the label values for the column
+    if col_order == None and col_mapping == None:
+        pass
+    elif col_mapping == None:
+        # if there is not col mapping but is col order, create a order_col based off col from raw data
+        df = df.assign(order_col=df[col_name].apply(lambda x: col_order[x]))
+    else:
+        # if there is a col mapping and col ordering, create order_col based off mapping
+        df = df.assign(order_col=df.name_col.apply(lambda x: col_order[x]))
+
+    ## drop the orginal data column and the one with names--will be remapped to the order column later
+    if col_mapping == None:
+        pass 
+    else:
+        # if there is no col order
+        if col_order == None:
+            # rename original column (code will break if you don't)
+            df.rename(columns={col_name:'temp'}, inplace=True)
+            # rename name_col to orignal column name
+            df.rename(columns={'name_col':col_name}, inplace=True)
+            # drop old column
+            df.drop(columns=['temp'], inplace=True)
+        else:
+            # if there IS an order column, then drop name_col
+            df.drop(columns=['name_col'], inplace=True)
+    
+    ## rename order column to original col name--order column should take precedence if it exists
+    if col_order == None:
+        pass 
+    else:
+        # rename original column (code will break if you don't)
+        df.rename(columns={col_name:'temp'}, inplace=True)
+        # rename order_col to orignal column name
+        df.rename(columns={'order_col':col_name}, inplace=True)
+        # drop old column
+        df.drop(columns=['temp'], inplace=True)
+
+    # rename index columns
+    if index_mapping == None:
+        pass 
+    else:
+        # rename index columns with index_mapping
+        df.rename(columns=index_mapping, inplace=True)
+
+
+    df = df.groupby([col_name, index_col]).agg(aggregations)    
+
+    # if you do not have col_mapping but you do have col_order
+    if col_mapping == None and col_order != None:
+        # reset index to manipulate it
+        df.reset_index(inplace=True)   
+        # sort by col_order values ascending 
+        df.sort_values(by=[col_name], inplace=True)
+        # set index back in place
+        df.set_index([col_name], inplace=True)
+        # create dictionary to return order name to original data labels
+        index_rename = {v: k for k, v in col_order.items()}
+        # rename index values with dictionary
+        df.rename(index=index_rename, level=0, inplace=True)
+    else:
+        pass
+
+    if pct_index1cat == False:
+        pass 
+    else:
+        df = df.groupby(level=0).apply(lambda x: x / x.sum())
+
+    # reshaping data
+
+    # code to convert from wide to long format, and then pivot so col_name values are columns and our two indices are rows
+
+    # same as before, index must be reset to regular columns to manipulate
+    df.reset_index(inplace=True)
+
+    # wide to long
+    df = pd.melt(df, 
+            # in this, both col_name and index_cols are the categorical variables, but the values still come solely from index_ordered_list vars
+            id_vars=[col_name, index_col], 
+            value_vars=index_ordered_list)
+ 
+    # pivot. this time, both our new categorical var from index_ordered_list and index_col are set as index, creating a multiindex
+    df = df.pivot(index=['variable',index_col],columns=col_name,values='value')
+
+    # cleaning up dataframe
+
+    # reordering row indices
+    if reorder_row_indices == False:
+        pass 
+    else:
+        # must reset index to manipulate it
+        df.reset_index(inplace=True)
+        
+        # assigning int value to each index value in ascending order
+        mapping1 = {index_order: i for i, index_order in enumerate(index_ordered_list)}
+        mapping2 = {index_order: i for i, index_order in enumerate(index2_ordered_list)}
+        
+        # mapping those int values onto the index variable to create a key
+        key1 = df['variable'].map(mapping1)
+        key2 = df[index_col].map(mapping2)
+        
+        # reordering the dataframe by the key
+        ## creating int columns based off key values (iloc method will not work for multiindex reordering more than one of the indices)
+        df['key1'] = key1
+        df['key2'] = key2
+
+        # sorting by the new columns and then dropping them
+        df.sort_values(by=['key1','key2'], inplace=True)
+        df.drop(['key1','key2'], axis=1, inplace=True)
+        # setting the index back
+        df.set_index(['variable',index_col], inplace=True)
+
+    # renaming indices
+    if index1_name == None:
+        pass 
+    else:
+        df.index.set_names(index1_name, level=0, inplace=True)
+
+    if index2_name == None:
+        pass 
+    else:
+        df.index.set_names(index2_name, level=1, inplace=True)
+
+    # returning column lables
+    if col_mapping == None:    
+        pass
+    elif col_order == None:
+        # putting labels back on columns when there is no col_order
+        df.rename(columns=col_mapping, inplace=True)
+    else:        
+        # reverse key and value pairs of col_order dict
+        col_rename = {v: k for k, v in col_order.items()}    
+
+        # putting labels back on columns
+        df.rename(columns=col_rename, inplace=True)     
+
+    return df
+
+    
