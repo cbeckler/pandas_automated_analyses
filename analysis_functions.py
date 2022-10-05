@@ -37,6 +37,103 @@ def create_label_mapping(data_list, label_list):
     return dict(zip(data_list, label_list))
 
 
+######################## GROUPBY RESULTS ##################################
+
+
+def simple_groupby(df, col_name, aggregations, index_mapping=None, index_ordered_list=None, index_name=None, stats_names=None):
+
+    # this function will perform a simple groupby by the specified column (col_name) and has optional args for formatting
+
+    ## MANDATORY:
+    ### df is your dataframe to be analyzed
+    ### col_name is the column to perform the groupby with    
+    ### aggregations is the dictionary containing your analyses for the groupby
+
+    ## OPTIONAL:
+    ### index_mapping is the dictionary to map your values in your col_name column to their desired labels
+    ### index_ordered_list is the list of your col_name index values in their desired order
+    ####        if you are using index_mapping to change the index values, this list MUST match the new names!
+    ### index_name is the name of your index  
+    ### stats_names is the list of names of your columns containing your results
+    ####        this list MUST be in the same around as your aggregations!
+
+    # import pandas in case any aggregations require it (ex: pd.Series.nunique for unique counts)
+    import pandas as pd
+
+    # the groupby
+    df = df.groupby(col_name).agg(aggregations)
+
+    # renaming index values
+    if index_mapping == None:
+        pass 
+    else:
+        # if your index name is also the name of one of your columns (ex: you took a count of your groupby var)
+        if df.index.name in list(df.columns):
+            # temporarily rename results col
+            df.rename(columns={col_name:'temp'}, inplace=True)
+            # reset the index for manipulation
+            df.reset_index(inplace=True)
+            # map the desired values onto your index
+            df[col_name] = df[col_name].map(index_mapping)
+            # set the index back
+            df.set_index(col_name, inplace=True)
+            # change the name of the column back
+            df.rename(columns={'temp':col_name}, inplace=True)
+        else:
+           # reset the index for manipulation
+            df.reset_index(inplace=True)
+            # map the desired values onto your index
+            df[col_name] = df[col_name].map(index_mapping)
+            # set the index back
+            df.set_index(col_name, inplace=True)
+
+    # reordering the index
+    if index_ordered_list == None:
+        pass 
+    else:
+        # if your index name is also the name of one of your columns (ex: you took a count of your groupby var)
+        if df.index.name in list(df.columns):
+            # temporarily rename results col
+            df.rename(columns={col_name:'temp'}, inplace=True)
+            # reset the index for manipulation
+            df.reset_index(inplace=True)
+            # assigning int value to each index value in ascending order
+            mapping = {index_order: i for i, index_order in enumerate(index_ordered_list)}
+            # mapping those int values onto the index variable to create a key
+            key = df[col_name].map(mapping)
+            # reordering the dataframe by the key
+            df = df.iloc[key.argsort()]
+            # set the index back
+            df.set_index(col_name, inplace=True)
+            # change the name of the column back
+            df.rename(columns={'temp':col_name}, inplace=True)
+        else:
+            # reset the index for manipulation
+            df.reset_index(inplace=True)
+            # assigning int value to each index value in ascending order
+            mapping = {index_order: i for i, index_order in enumerate(index_ordered_list)}
+            # mapping those int values onto the index variable to create a key
+            key = df[col_name].map(mapping)
+            # reordering the dataframe by the key
+            df = df.iloc[key.argsort()]
+            # set the index back
+            df.set_index(col_name, inplace=True)
+
+    # renaming index
+    if index_name == None:
+        pass 
+    else:
+        df.index.name = index_name
+
+    # renaming results columns
+    if stats_names == None:
+        pass
+    else:
+        df.columns = stats_names         
+
+    return df
+
+
 ######################## PIVOTED RESULTS ##################################
 
 #####       SINGLE ROW INDEX SINGLE HEADER ROW              #####
