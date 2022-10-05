@@ -174,42 +174,70 @@ def col_pivot_row_index_results(df, col_name, index_ordered_list, aggregations, 
     if col_mapping == None:
         pass 
     else:
+        # create a name_col with label values
         df = df.assign(name_col=df[col_name].apply(lambda x: col_mapping[x]))
 
     ## map the order to the label values for the column
-    if col_order == None:
+    if col_order == None and col_mapping == None:
         pass
-    if col_mapping == None:
+    elif col_mapping == None:
+        # if there is not col mapping but is col order, create a order_col based off col from raw data
         df = df.assign(order_col=df[col_name].apply(lambda x: col_order[x]))
     else:
+        # if there is a col mapping and col ordering, create order_col based off mapping
         df = df.assign(order_col=df.name_col.apply(lambda x: col_order[x]))
 
     ## drop the orginal data column and the one with names--will be remapped to the order column later
     if col_mapping == None:
         pass 
     else:
+        # if there is no col order
         if col_order == None:
-            df.drop(columns=['name_col'], inplace=True)
+            # rename original column (code will break if you don't)
+            df.rename(columns={col_name:'temp'}, inplace=True)
+            # rename name_col to orignal column name
+            df.rename(columns={'name_col':col_name}, inplace=True)
+            # drop old column
+            df.drop(columns=['temp'], inplace=True)
         else:
-            df.drop(columns=[col_name, 'name_col'], inplace=True)
+            # if there IS an order column, then drop name_col
+            df.drop(columns=['name_col'], inplace=True)
     
-    ## rename order column to original col name
+    ## rename order column to original col name--order column should take precedence if it exists
     if col_order == None:
         pass 
     else:
+        # rename original column (code will break if you don't)
+        df.rename(columns={col_name:'temp'}, inplace=True)
+        # rename order_col to orignal column name
         df.rename(columns={'order_col':col_name}, inplace=True)
-
-    ## casting var as categorical type instead of string (takes less memory)
-    df[col_name] = df[col_name].astype('category')
+        # drop old column
+        df.drop(columns=['temp'], inplace=True)
 
     # rename index columns
     if index_mapping == None:
         pass 
     else:
+        # rename index columns with index_mapping
         df.rename(columns=index_mapping, inplace=True)
 
     # groupby analysis
     df = df.groupby(col_name).agg(aggregations)
+
+    # if you do not have col_mapping but you do have col_order
+    if col_mapping == None and col_order != None:
+        # reset index to manipulate it
+        df.reset_index(inplace=True)   
+        # sort by col_order values ascending 
+        df.sort_values(by=[col_name], inplace=True)
+        # set index back in place
+        df.set_index([col_name], inplace=True)
+        # create dictionary to return order name to original data labels
+        index_rename = {v: k for k, v in col_order.items()}
+        # rename index values with dictionary
+        df.rename(index=index_rename, level=0, inplace=True)
+    else:
+        pass
 
     # reshaping data
 
@@ -253,8 +281,8 @@ def col_pivot_row_index_results(df, col_name, index_ordered_list, aggregations, 
 
     if col_mapping == None:    
         pass
-    if col_order == None:
-        # putting labels back on columns
+    elif col_order == None:
+        # putting labels back on columns when there is no col_order
         df.rename(columns=col_mapping, inplace=True)
     else:        
         # reverse key and value pairs of col_order dict
