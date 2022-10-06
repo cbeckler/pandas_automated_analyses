@@ -60,8 +60,24 @@ def simple_groupby(df, col_name, aggregations, index_mapping=None, index_ordered
     # import pandas in case any aggregations require it (ex: pd.Series.nunique for unique counts)
     import pandas as pd
 
-    # the groupby
-    df = df.groupby(col_name).agg(aggregations)
+
+    # groupby var needs to be cateogorical so all rows return data even if there is none, which needs to be categorical dtype
+    ## but categorical dtype cols cannot be sorted
+    ## create a copy var and set that as categorical type
+    df['copy'] = df[col_name]
+    df['copy'] = df['copy'].astype('category')    
+
+    # groupby the col_name and its copy
+    df = df.groupby([col_name, 'copy']).agg(aggregations)
+
+    # reset the index
+    df.reset_index(inplace=True)
+    # get rid of duplicates by only keeping rows where the copy matches the col_name
+    df = df[df[col_name]==df['copy']]
+    # drop the copy column
+    df.drop(columns=['copy'],inplace=True)
+    # set the index back to just col_name
+    df.set_index(col_name, inplace=True)
 
     # renaming index values
     if index_mapping == None:
@@ -224,8 +240,23 @@ def col_pivot_row_index_results(df, col_name, index_ordered_list, aggregations, 
         # rename index columns with index_mapping
         df.rename(columns=index_mapping, inplace=True)
 
+    # groupby var needs to be cateogorical so all rows return data even if there is none, which needs to be categorical dtype
+    ## but categorical dtype cols cannot be sorted
+    ## create a copy var and set that as categorical type
+    df['copy'] = df[col_name]
+    df['copy'] = df['copy'].astype('category') 
+
     # groupby analysis
-    df = df.groupby(col_name).agg(aggregations)
+    df = df.groupby([col_name, 'copy']).agg(aggregations)
+
+    # reset the index
+    df.reset_index(inplace=True)
+    # get rid of duplicates by only keeping rows where the copy matches the col_name
+    df = df[df[col_name]==df['copy']]
+    # drop the copy column
+    df.drop(columns=['copy'],inplace=True)
+    # set the index back to just col_name
+    df.set_index(col_name, inplace=True)
 
     # if you do not have col_mapping but you do have col_order
     if col_mapping == None and col_order != None:
@@ -395,8 +426,22 @@ def col_pivot_row_multiindex_results(df, col_name, index_ordered_list, index_col
         # rename index columns with index_mapping
         df.rename(columns=index_mapping, inplace=True)
 
+    # groupby var needs to be cateogorical so all rows return data even if there is none, which needs to be categorical dtype
+    ## but categorical dtype cols cannot be sorted
+    ## create a copy var and set that as categorical type
+    df['copy'] = df[col_name]
+    df['copy'] = df['copy'].astype('category') 
 
-    df = df.groupby([col_name, index_col]).agg(aggregations)    
+    df = df.groupby([col_name, 'copy', index_col]).agg(aggregations)
+
+    # reset the index
+    df.reset_index(inplace=True)
+    # get rid of duplicates by only keeping rows where the copy matches the col_name
+    df = df[df[col_name]==df['copy']]
+    # drop the copy column
+    df.drop(columns=['copy'],inplace=True)
+    # set the index back to just col_name
+    df.set_index([col_name, index_col], inplace=True)    
 
     # if you do not have col_mapping but you do have col_order
     if col_mapping == None and col_order != None:
@@ -574,8 +619,23 @@ def col_pivot_row_index_dbl_header_results(df, col_name, index_col, stats_names,
         # drop old column
         df.drop(columns=['temp'], inplace=True)
 
+    # groupby var needs to be cateogorical so all rows return data even if there is none, which needs to be categorical dtype
+    ## but categorical dtype cols cannot be sorted
+    ## create a copy var and set that as categorical type
+    df['copy'] = df[col_name]
+    df['copy'] = df['copy'].astype('category') 
+
     # groupby analysis
-    df = df.groupby([col_name, index_col]).agg(aggregations)
+    df = df.groupby([col_name, 'copy', index_col]).agg(aggregations)
+
+    # reset the index
+    df.reset_index(inplace=True)
+    # get rid of duplicates by only keeping rows where the copy matches the col_name
+    df = df[df[col_name]==df['copy']]
+    # drop the copy column
+    df.drop(columns=['copy'],inplace=True)
+    # set the index back to just col_name
+    df.set_index([col_name, index_col], inplace=True)
 
     # if you do not have col_mapping but you do have col_order
     if col_mapping == None and col_order != None:
