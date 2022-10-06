@@ -40,7 +40,8 @@ def create_label_mapping(data_list, label_list):
 ######################## GROUPBY RESULTS ##################################
 
 
-def simple_groupby(df, col_name, aggregations, index_mapping=None, index_ordered_list=None, index_name=None, stats_names=None):
+def simple_groupby(df, col_name, aggregations, index_mapping=None, index_ordered_list=None, index_name=None, stats_names=None,\
+    null_to_0=None):
 
     # this function will perform a simple groupby by the specified column (col_name) and has optional args for formatting
 
@@ -145,7 +146,16 @@ def simple_groupby(df, col_name, aggregations, index_mapping=None, index_ordered
     if stats_names == None:
         pass
     else:
-        df.columns = stats_names         
+        df.columns = stats_names
+
+    # replace nulls with 0
+    if null_to_0 == None:
+        pass
+    else:
+        for null_col_name in null_to_0:
+            for col_num, df_col_name in enumerate(df.columns):
+                if null_col_name == df_col_name:
+                    df[df_col_name] = df[df_col_name].fillna(0)         
 
     return df
 
@@ -155,7 +165,7 @@ def simple_groupby(df, col_name, aggregations, index_mapping=None, index_ordered
 #####       SINGLE ROW INDEX SINGLE HEADER ROW              #####
 
 def col_pivot_row_index_results(df, col_name, index_ordered_list, aggregations, col_mapping=None, col_order=None, index_mapping=None, \
-    index_name=None):
+    index_name=None, null_to_0=False):
 
     # this function will perform an analysis of the data by the col_name and index columns with groupby by col_name
     # it will then reshape and clean the results table to a report-ready format
@@ -323,7 +333,14 @@ def col_pivot_row_index_results(df, col_name, index_ordered_list, aggregations, 
         col_rename = {v: k for k, v in col_order.items()}    
 
         # putting labels back on columns
-        df.rename(columns=col_rename, inplace=True) 
+        df.rename(columns=col_rename, inplace=True)
+
+    # replace nulls with 0
+    if null_to_0 == False:
+        pass
+    else:
+        for col_num, df_col_name in enumerate(df.columns):
+            df[df_col_name] = df[df_col_name].fillna(0) 
 
     return df
 
@@ -332,7 +349,7 @@ def col_pivot_row_index_results(df, col_name, index_ordered_list, aggregations, 
 
 
 def col_pivot_row_multiindex_results(df, col_name, index_ordered_list, index_col, aggregations, col_mapping=None, col_order=None, index_mapping=None, \
-    index2_ordered_list=None, index1_name=None, index2_name=None, reorder_row_indices=True, pct_index1cat=False):
+    index2_ordered_list=None, index1_name=None, index2_name=None, reorder_row_indices=True, pct_index1cat=False, null_to_0=False):
 
     # this function will perform an analysis of the data by the col_name and index columns with groupby by col_name and index_col
     # it will then reshape and clean the results table to a report-ready format
@@ -529,15 +546,23 @@ def col_pivot_row_multiindex_results(df, col_name, index_ordered_list, index_col
         col_rename = {v: k for k, v in col_order.items()}    
 
         # putting labels back on columns
-        df.rename(columns=col_rename, inplace=True)     
+        df.rename(columns=col_rename, inplace=True) 
 
+    # replace nulls with 0
+    if null_to_0 == False:
+        pass
+    else:
+        for col_num, df_col_name in enumerate(df.columns):
+            df[df_col_name] = df[df_col_name].fillna(0) 
+
+      
     return df
 
 
 #####       SINGLE ROW INDEX DOUBLE HEADER ROW              #####
 
 def col_pivot_row_index_dbl_header_results(df, col_name, index_col, stats_names, aggregations, col_mapping=None, col_order=None, \
-    index_mapping=None, index_order=None, index_name=None):
+    index_mapping=None, index_order=None, index_name=None, null_to_0=None):
 
     # this function will perform an analysis of the data by the col_name and index_col with specificed aggregations 
     # and groupby by col_name and index_col
@@ -671,6 +696,15 @@ def col_pivot_row_index_dbl_header_results(df, col_name, index_col, stats_names,
 
     # pivot--will assign the col_name values to the columns and the index values to the index row
     df = df.pivot(index=index_col,columns=[col_name, 'variable'],values='value')
+
+    # replace nulls with 0
+    if null_to_0 == None:
+        pass
+    else:
+        for null_col_name in null_to_0:
+            for col_num, df_col_name in enumerate(df.columns):
+                if null_col_name == df_col_name:
+                    df[df_col_name] = df[df_col_name].fillna(0)   
     
     # cleaning up dataframe
 
