@@ -165,7 +165,7 @@ def simple_groupby(df, col_name, aggregations, index_mapping=None, index_ordered
 
 #####       SINGLE ROW INDEX SINGLE HEADER ROW              #####
 
-def col_pivot_row_index_results(df, col_name, index_ordered_list, aggregations, col_mapping=None, col_order=None, index_mapping=None, \
+def col_pivot_row_combined_index_results(df, col_name, index_ordered_list, aggregations, col_mapping=None, col_order=None, index_mapping=None, \
     index_name=None, null_to_0=False):
 
     # this function will perform an analysis of the data by the col_name and index columns with groupby by col_name
@@ -350,7 +350,7 @@ def col_pivot_row_index_results(df, col_name, index_ordered_list, aggregations, 
 #####       TWO VAR ROW MULTIINDEX SINGLE HEADER ROW              #####
 
 
-def col_pivot_row_multiindex_results(df, col_name, index_ordered_list, index_col, aggregations, col_mapping=None, col_order=None, index_mapping=None, \
+def col_pivot_row_combined_multiindex_results(df, col_name, index_ordered_list, index_col, aggregations, col_mapping=None, col_order=None, index_mapping=None, \
     index2_ordered_list=None, index1_name=None, index2_name=None, reorder_row_indices=True, pct_index1cat=False, null_to_0=False):
 
     # this function will perform an analysis of the data by the col_name and index columns with groupby by col_name and index_col
